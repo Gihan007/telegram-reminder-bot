@@ -45,3 +45,7 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Sensitive example files
+.env.example
+DEPLOY.md
