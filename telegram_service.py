@@ -78,6 +78,7 @@ I'll figure out when to remind you and send a message at the right time!"""
             
             # Parse the message
             parsed_data = self.task_parser.parse_message(message_text)
+            print(f"🔍 Parsed data: {parsed_data}")
             
             if not parsed_data:
                 # Try fallback parser
