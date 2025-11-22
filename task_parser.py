@@ -30,14 +30,23 @@ User message: "{message}"
 
 Extract the following information from the message:
 1. Task description (what the user wants to be reminded about)
-2. Reminder datetime (when to send the reminder, not the deadline)
+2. Reminder datetime (when to send the reminder)
 
 Important rules:
-- If the user says "before [day/time]", calculate an appropriate reminder time (e.g., "before Friday morning" -> Thursday 8 PM or Friday 6 AM)
-- If the user says "on [day/time]", set the reminder for that exact time
-- If no specific time is mentioned, use 9 AM as default
-- Convert relative days (tomorrow, Friday, etc.) to actual dates
-- The reminder time should be BEFORE the actual deadline/event
+- "in X seconds/minutes/hours" means ADD that time to current time
+- "within X seconds/minutes/hours" means ADD that time to current time
+- "after X seconds/minutes/hours" means ADD that time to current time
+- "tomorrow" means next day at 9 AM unless time specified
+- "tonight" means today at 8 PM
+- "today" means today, preserve current time or add specified time
+- If no specific time mentioned, use 9 AM as default for future days
+- Calculate from the CURRENT time provided above
+
+Examples:
+- "in 30 seconds" from 2:21 PM -> 2:21:30 PM today
+- "within 2 minutes" from 2:21 PM -> 2:23 PM today
+- "in 1 hour" from 2:21 PM -> 3:21 PM today
+- "tomorrow at 3pm" -> tomorrow at 3:00 PM
 
 Return ONLY a JSON object with this exact format:
 {{
