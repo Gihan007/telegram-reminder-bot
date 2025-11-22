@@ -70,6 +70,11 @@ Do not include any other text or explanation."""
         Returns:
             Dictionary with task_description and reminder_time, or None if parsing fails
         """
+        # First try the simple parser for common patterns (faster and more reliable)
+        simple_result = self.parse_simple_reminder(message)
+        if simple_result and simple_result.get('confidence') == 'high':
+            return simple_result
+        
         try:
             # Get current time in the configured timezone
             current_time = datetime.now(self.timezone)
@@ -132,29 +137,56 @@ Do not include any other text or explanation."""
         """
         try:
             current_time = datetime.now(self.timezone)
+            message_lower = message.lower()
             
-            # Pattern: "remind me to [task] [time]"
-            patterns = [
-                r'remind me to (.+?) (tomorrow|today|tonight|in \d+ (hour|hours|day|days|minute|minutes))',
-                r'remind me to (.+?)$',
-            ]
+            # Extract task description (everything before time indicators)
+            task_match = re.search(r'remind me to (.+?)(?:\s+in\s+|\s+within\s+|\s+after\s+|$)', message_lower)
+            if not task_match:
+                return None
             
-            for pattern in patterns:
-                match = re.search(pattern, message.lower())
-                if match:
-                    task = match.group(1).strip()
-                    
-                    # Default to tomorrow at 9 AM
-                    reminder_time = current_time + timedelta(days=1)
-                    reminder_time = reminder_time.replace(hour=9, minute=0, second=0)
-                    
-                    return {
-                        'task_description': task,
-                        'reminder_time': reminder_time,
-                        'confidence': 'low'
-                    }
+            task = task_match.group(1).strip()
+            reminder_time = current_time
             
-            return None
+            # Parse relative time: "in/within/after X seconds/minutes/hours/days"
+            time_match = re.search(r'(?:in|within|after)\s+(\d+)\s+(second|seconds|minute|minutes|hour|hours|day|days)', message_lower)
+            
+            if time_match:
+                amount = int(time_match.group(1))
+                unit = time_match.group(2)
+                
+                if 'second' in unit:
+                    reminder_time = current_time + timedelta(seconds=amount)
+                elif 'minute' in unit:
+                    reminder_time = current_time + timedelta(minutes=amount)
+                elif 'hour' in unit:
+                    reminder_time = current_time + timedelta(hours=amount)
+                elif 'day' in unit:
+                    reminder_time = current_time + timedelta(days=amount)
+                
+                return {
+                    'task_description': task,
+                    'reminder_time': reminder_time,
+                    'confidence': 'high'
+                }
+            
+            # Parse specific times: "tomorrow", "today", "tonight"
+            if 'tomorrow' in message_lower:
+                reminder_time = current_time + timedelta(days=1)
+                reminder_time = reminder_time.replace(hour=9, minute=0, second=0)
+            elif 'tonight' in message_lower:
+                reminder_time = current_time.replace(hour=20, minute=0, second=0)
+            elif 'today' in message_lower:
+                reminder_time = current_time.replace(hour=18, minute=0, second=0)
+            else:
+                # Default to tomorrow at 9 AM
+                reminder_time = current_time + timedelta(days=1)
+                reminder_time = reminder_time.replace(hour=9, minute=0, second=0)
+            
+            return {
+                'task_description': task,
+                'reminder_time': reminder_time,
+                'confidence': 'medium'
+            }
             
         except Exception as e:
             print(f"Error in simple parser: {e}")
